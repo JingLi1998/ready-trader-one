@@ -1,0 +1,24 @@
+2020-03-10 11:49:44,026 [INFO   ] [APP] exchange started with arguments={run.py}
+2020-03-10 11:49:44,026 [INFO   ] [APP] configuration={"Engine":{"MarketDataFile":"data/day1.csv","MatchEventsFile":"match_events.csv","Speed":50.0,"TickInterval":0.25},"Execution":{"ListenAddress":"127.0.0.1","Port":12345},"Fees":{"Maker":-0.0001,"Taker":0.0002},"Information":{"AllowBroadcast":false,"Host":"239.255.1.1","Interface":"0.0.0.0","Port":12346},"Instrument":{"EtfClamp":0.002,"TickSize":1.0},"Limits":{"ActiveOrderCountLimit":10,"ActiveVolumeLimit":200,"MessageFrequencyInterval":1.0,"MessageFrequencyLimit":20,"PositionLimit":100},"Traders":{"TraderOne":"secret","ExampleOne":"qwerty","ExampleTwo":"12345"}}
+2020-03-10 11:49:44,027 [INFO   ] [CONTROLLER] starting the match
+2020-03-10 11:49:44,034 [ERROR  ] [MATCH_EVENTS] failed to open match events file: filename=match_events.csv
+Traceback (most recent call last):
+  File "C:\Users\Jing\Desktop\ready_trader_one\ready_trader_one\match_events.py", line 133, in start
+    match_events = open(self.filename, "w", newline="")
+PermissionError: [Errno 13] Permission denied: 'match_events.csv'
+2020-03-10 11:49:44,043 [ERROR  ] [asyncio] Task exception was never retrieved
+future: <Task finished coro=<Controller.start() done, defined at C:\Users\Jing\Desktop\ready_trader_one\ready_trader_one\controller.py:147> exception=PermissionError(13, 'Permission denied')>
+Traceback (most recent call last):
+  File "C:\Users\Jing\Desktop\ready_trader_one\ready_trader_one\controller.py", line 165, in start
+    self.match_events.start()
+  File "C:\Users\Jing\Desktop\ready_trader_one\ready_trader_one\match_events.py", line 133, in start
+    match_events = open(self.filename, "w", newline="")
+PermissionError: [Errno 13] Permission denied: 'match_events.csv'
+2020-03-10 11:49:44,186 [INFO   ] [EXECUTION] fd=696 accepted a new connection: peer=127.0.0.1:54238
+2020-03-10 11:49:44,186 [INFO   ] [EXECUTION] fd=716 accepted a new connection: peer=127.0.0.1:54237
+2020-03-10 11:49:44,186 [INFO   ] [EXECUTION] fd=696 login failed: name='Orange'
+2020-03-10 11:49:44,187 [INFO   ] [CONTROLLER] 'ExampleTwo' is ready!
+2020-03-10 11:49:44,187 [INFO   ] [EXECUTION] fd=716 login successful: name='ExampleTwo'
+2020-03-10 11:49:44,190 [INFO   ] [EXECUTION] fd=696 accepted a new connection: peer=127.0.0.1:54239
+2020-03-10 11:49:44,190 [INFO   ] [CONTROLLER] 'ExampleOne' is ready!
+2020-03-10 11:49:44,191 [INFO   ] [EXECUTION] fd=696 login successful: name='ExampleOne'
