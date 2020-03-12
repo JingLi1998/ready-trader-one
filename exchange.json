@@ -2,7 +2,7 @@
   "Engine": {
     "MarketDataFile": "data/day1.csv",
     "MatchEventsFile": "match_events.csv",
-    "Speed": 50.0,
+    "Speed": 20.0,
     "TickInterval": 0.25
   },
   "Execution": {
@@ -31,7 +31,7 @@
     "PositionLimit": 100
   },
   "Traders": {
-    "TraderOne": "secret",
+    "Orange": "password",
     "ExampleOne": "qwerty",
     "ExampleTwo": "12345"
   }

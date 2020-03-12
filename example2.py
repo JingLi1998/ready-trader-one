@@ -30,14 +30,7 @@ class AutoTrader(BaseAutoTrader):
         bid_volumes: List[int],
     ) -> None:
         """Called periodically to report the status of an order book."""
-        with open("bidPrice.txt", "a") as file:  # Use file to refer to the file object
-            file.write(bid_prices)
-        with open("bidVolume.txt", "a") as file:  # Use file to refer to the file object
-            file.write(bid_volumes)
-        with open("askPrice.txt", "a") as file:  # Use file to refer to the file object
-            file.write(ask_prices)
-        with open("askVolume.txt", "a") as file:  # Use file to refer to the file object
-            file.write(ask_volumes)
+
         if instrument == Instrument.FUTURE:
             new_bid_price = (
                 bid_prices[0] - self.position * 100 if bid_prices[0] != 0 else 0
