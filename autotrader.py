@@ -34,12 +34,14 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
-        self.logger.info(instrument)
-        self.logger.info(sequence_number)
-        self.logger.info(ask_prices)
-        self.logger.info(ask_volumes)
-        self.logger.info(bid_prices)
-        self.logger.info(bid_volumes)
+        with open("bidPrice.txt", "a") as file:  # Use file to refer to the file object
+            file.write(bid_prices)
+        with open("bidVolume.txt", "a") as file:  # Use file to refer to the file object
+            file.write(bid_volumes)
+        with open("askPrice.txt", "a") as file:  # Use file to refer to the file object
+            file.write(ask_prices)
+        with open("askVolume.txt", "a") as file:  # Use file to refer to the file object
+            file.write(ask_volumes)
 
     def on_order_status_message(
         self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int

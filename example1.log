@@ -1,2 +1,11 @@
 2020-03-10 11:49:44,182 [INFO   ] [APP] example1 started with arguments={run.py}
 2020-03-10 11:49:44,182 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
+2020-03-12 14:48:53,460 [INFO   ] [APP] example1 started with arguments={run.py}
+2020-03-12 14:48:53,461 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
+2020-03-12 14:49:38,442 [WARNING] [TRADER] error with order 940: position limit breached
+2020-03-12 14:49:38,443 [ERROR  ] [TRADER] lost connection on execution channel:
+Traceback (most recent call last):
+  File "C:\ProgramData\Anaconda3\lib\asyncio\selector_events.py", line 804, in _read_ready__data_received
+    data = self._sock.recv(self.max_size)
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+2020-03-12 14:49:38,446 [INFO   ] [APP] closing event loop
