@@ -1,29 +1,9 @@
-2020-03-12 16:57:18,489 [INFO   ] [APP] example1 started with arguments={run.py}
-2020-03-12 16:57:18,489 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
-2020-03-12 16:57:45,649 [WARNING] [TRADER] error with order 1116: position limit breached
-2020-03-12 16:57:45,655 [ERROR  ] [TRADER] lost connection on execution channel:
+2020-03-15 00:44:43,630 [INFO   ] [APP] example1 started with arguments={run.py}
+2020-03-15 00:44:43,631 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
+2020-03-15 00:45:10,715 [WARNING] [TRADER] error with order 1279: position limit breached
+2020-03-15 00:45:10,716 [ERROR  ] [TRADER] lost connection on execution channel:
 Traceback (most recent call last):
   File "C:\ProgramData\Anaconda3\lib\asyncio\selector_events.py", line 804, in _read_ready__data_received
     data = self._sock.recv(self.max_size)
 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
-2020-03-12 16:57:45,659 [INFO   ] [APP] closing event loop
-2020-03-12 17:02:53,540 [INFO   ] [APP] example1 started with arguments={run.py}
-2020-03-12 17:02:53,541 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
-2020-03-12 17:03:18,165 [WARNING] [TRADER] error with order 646: position limit breached
-2020-03-12 17:03:18,167 [ERROR  ] [TRADER] lost connection on execution channel:
-Traceback (most recent call last):
-  File "C:\ProgramData\Anaconda3\lib\asyncio\selector_events.py", line 804, in _read_ready__data_received
-    data = self._sock.recv(self.max_size)
-ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
-2020-03-12 17:03:18,169 [INFO   ] [APP] closing event loop
-2020-03-12 17:08:03,419 [INFO   ] [APP] example1 started with arguments={run.py}
-2020-03-12 17:08:03,420 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
-2020-03-12 17:08:24,244 [INFO   ] [APP] example1 started with arguments={run.py}
-2020-03-12 17:08:24,244 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleOne","Secret":"qwerty"}
-2020-03-12 17:08:48,870 [WARNING] [TRADER] error with order 675: position limit breached
-2020-03-12 17:08:48,872 [ERROR  ] [TRADER] lost connection on execution channel:
-Traceback (most recent call last):
-  File "C:\ProgramData\Anaconda3\lib\asyncio\selector_events.py", line 804, in _read_ready__data_received
-    data = self._sock.recv(self.max_size)
-ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
-2020-03-12 17:08:48,874 [INFO   ] [APP] closing event loop
+2020-03-15 00:45:10,719 [INFO   ] [APP] closing event loop

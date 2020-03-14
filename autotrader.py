@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import numpy as np
 
 from typing import List, Tuple
 
@@ -11,29 +12,44 @@ class AutoTrader(BaseAutoTrader):
         """Initialise a new instance of the AutoTrader class."""
         super(AutoTrader, self).__init__(loop)
         self.order_ids = itertools.count(1)
-        self.ask_id = self.ask_price = self.bid_id = self.bid_price = 0
+        self.ask_id = (
+            self.ask_price
+        ) = self.bid_id = self.bid_price = self.bid_volume = self.ask_volume = 0
 
         self.position = 0
 
-        # Future
-        self.best_future_bid = 0
-        self.best_future_ask = 0
+        self.etf_seq_number = -1
+        self.future_seq_number = -1
 
-        # ETF
-        self.previous_ask_price_diffs = []
-        self.previous_bid_price_diffs = []
+        ob_depth = 5
+        self.future_ask_prices = np.zeros(ob_depth)
+        self.future_ask_volumes = np.zeros(ob_depth)
+        self.future_bid_prices = np.zeros(ob_depth)
+        self.future_bid_volumes = np.zeros(ob_depth)
 
-        # Max Min Price Diffs
-        self.max_buy_price_diff = 0
-        self.min_sell_price_diff = 0
+        self.etf_ask_prices = np.zeros(ob_depth)
+        self.etf_ask_volumes = np.zeros(ob_depth)
+        self.etf_bid_prices = np.zeros(ob_depth)
+        self.etf_bid_volumes = np.zeros(ob_depth)
 
-        # Max Min Prices
-        self.max_buy_price = 0
-        self.min_sell_price = 0
+        self.ones_arr = np.ones(ob_depth)
 
-        # Volumes
-        self.current_bid_volume = 0
-        self.current_ask_volume = 0
+        self.max_bid_volume = 100
+        self.max_ask_volume = 100
+
+        self.price_bw = 0
+        self.price_bw_prev = 0
+        self.volume_im_etf = 0
+        self.volume_im_etf_prev = 0
+
+        self.mean_est = 0
+        self.var_est = 0
+        self.est_index = 1
+
+        self.order_count = 0
+        self.max_order_count = 20
+
+        self.tick_size = 1
 
     def on_error_message(self, client_order_id: int, error_message: bytes) -> None:
         """Called when the exchange detects an error.
@@ -62,85 +78,158 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
-        current_ask_prices = reversed(ask_prices)
-        current_bid_prices = bid_prices
-        current_ask_volumes = reversed(ask_volumes)
-        current_bid_volumes = bid_volumes
+        if (
+            sequence_number < self.future_seq_number
+            or sequence_number < self.etf_seq_number
+        ):
+            return
+
         if instrument == Instrument.FUTURE:
-            self.best_future_bid = bid_prices[-1]
-            self.best_future_ask = ask_prices[0]
-        else:
-            if self.best_future_ask == 0 or self.best_future_bid == 0:
-                return
-            for price in current_ask_prices:
-                self.min_sell_price_diff = self.updateMinSellPriceDiffFromAskAdd(
-                    price - self.best_future_ask, self.min_sell_price_diff
-                )
-                self.max_buy_price_diff = self.updateMaxBuyPriceDiffFromAskAdd(
-                    price - self.best_future_bid, self.max_buy_price_diff
-                )
-            for price in current_bid_prices:
-                self.min_sell_price_diff = self.updateMinSellPriceDiffFromBidAdd(
-                    price - self.best_future_ask, self.min_sell_price_diff
-                )
-                self.max_buy_price_diff = self.updateMaxBuyPriceDiffFromBidAdd(
-                    price - self.best_future_bid, self.max_buy_price_diff
-                )
-            if self.previous_ask_price_diffs:
-                for price in self.previous_ask_price_diffs:
-                    self.max_buy_price_diff = self.updateMaxBuyPriceDiffFromAskRemove(
-                        price, self.max_buy_price_diff
-                    )
-            if self.previous_bid_price_diffs:
-                for price in self.previous_bid_price_diffs:
-                    self.min_sell_price_diff = self.updateMinSellPriceDiffFromBidRemove(
-                        price, self.min_sell_price_diff
-                    )
+            if sequence_number >= self.future_seq_number:
+                self.future_ask_prices = np.array(ask_prices, dtype="int64")
+                self.future_ask_volumes = np.array(ask_volumes, dtype="int64")
+                self.future_bid_prices = np.array(bid_prices, dtype="int64")
+                self.future_bid_volumes = np.array(bid_volumes, dtype="int64")
+                self.future_seq_number = sequence_number
+        elif sequence_number >= self.etf_seq_number:
+            self.etf_ask_prices = np.array(ask_prices, dtype="int64")
+            self.etf_ask_volumes = np.array(ask_volumes, dtype="int64")
+            self.etf_bid_prices = np.array(bid_prices, dtype="int64")
+            self.etf_bid_volumes = np.array(bid_volumes, dtype="int64")
+            self.etf_seq_number = sequence_number
 
-            self.previous_ask_price_diffs = [
-                x - self.best_future_ask for x in current_ask_prices
-            ]
-            self.previous_bid_price_diffs = [
-                x - self.best_future_bid for x in current_bid_prices
-            ]
+        if self.etf_seq_number != self.future_seq_number:
+            return
 
-            self.min_sell_price = (
-                max(0, self.min_sell_price_diff) + self.best_future_ask
+        best_bid = self.future_bid_prices[0]
+        best_ask = self.future_ask_prices[0]
+        if best_bid == 0 or best_ask == 0:
+            return
+
+        bids_on_ob = self.bid_volume * (self.bid_price >= self.etf_bid_prices[-1])
+        asks_on_ob = self.ask_volume * (self.ask_price <= self.etf_ask_prices[-1])
+        weight_total_etf = np.dot(
+            self.etf_bid_volumes + self.etf_ask_volumes - bids_on_ob - asks_on_ob,
+            self.ones_arr,
+        )
+        price_bw_etf = 0
+        if weight_total_etf != 0:
+            price_bw_etf = (
+                np.dot(self.etf_bid_prices, self.etf_bid_volumes)
+                + np.dot(self.etf_ask_prices, self.etf_ask_volumes)
+                - self.bid_price * bids_on_ob
+                - self.ask_price * asks_on_ob
+            ) / weight_total_etf
+            self.volume_im_etf_prev = self.volume_im_etf
+            self.volume_im_etf = (
+                np.dot(
+                    self.etf_bid_volumes
+                    - self.etf_ask_volumes
+                    - bids_on_ob
+                    + asks_on_ob,
+                    self.ones_arr,
+                )
+                / weight_total_etf
             )
-            self.max_buy_price = min(0, self.max_buy_price_diff) + self.best_future_bid
 
-            self.logger.warning(f"Maxdiff: {self.max_buy_price_diff}")
-            self.logger.warning(f"Mindiff: {self.min_sell_price_diff}")
-            self.logger.warning(f"MaxBuy: {self.max_buy_price}")
-            self.logger.warning(f"MinSell: {self.min_sell_price}")
+        weight_total_future = np.dot(
+            self.future_bid_volumes + self.future_ask_volumes, self.ones_arr
+        )
+        price_bw_future = 0
+        if weight_total_future != 0:
+            price_bw_future = (
+                np.dot(self.future_bid_prices, self.future_bid_volumes)
+                + np.dot(self.future_ask_prices, self.future_ask_volumes)
+            ) / weight_total_future
 
-            if self.position < 100:
-                if self.current_bid_volume < 100:
-                    self.bid_id = next(self.order_ids)
-                    self.bid_price = self.max_buy_price
-                    self.send_insert_order(
-                        self.bid_id,
-                        Side.BUY,
-                        self.bid_price,
-                        min(100 - self.position, 100 - self.current_bid_volume),
-                        Lifespan.GOOD_FOR_DAY,
-                    )
-                    self.current_bid_volume += 100 - self.current_bid_volume
-                # else:
-                # amend
+        self.price_bw_prev = self.price_bw
+        self.price_bw = price_bw_etf
+        if self.price_bw == 0 or self.price_bw_prev == 0:
+            self.est_index += 1
+            return
 
-            if self.position > -100:
-                if self.current_ask_volume < 100:
-                    self.ask_id = next(self.order_ids)
-                    self.ask_price = self.min_sell_price
-                    self.send_insert_order(
-                        self.ask_id,
-                        Side.SELL,
-                        self.ask_price,
-                        min(100 + self.position, 100 - self.current_ask_volume),
-                        Lifespan.GOOD_FOR_DAY,
-                    )
-                    self.current_ask_volume += 100 - self.current_ask_volume
+        log_return = np.log(self.price_bw / self.price_bw_prev)
+        if self.est_index >= 3:
+            self.var_est = (
+                (self.est_index - 3) * self.var_est
+                + (log_return - self.volume_im_etf_prev - self.mean_est) ** 2
+            ) / (self.est_index - 2)
+        if self.est_index >= 2:
+            self.mean_est = (
+                (self.est_index - 2) * self.mean_est
+                + log_return
+                - self.volume_im_etf_prev
+            ) / (self.est_index - 1)
+        self.est_index += 1
+        if self.est_index <= 3:
+            return
+
+        log_price_bw_expected_return = (
+            self.volume_im_etf + self.mean_est + self.var_est / 2
+        )
+
+        self.logger.warning(f"WeightTotal: {weight_total_etf}")
+        self.logger.warning(f"PriceBW: {self.price_bw}")
+        self.logger.warning(f"VolumeIm: {self.volume_im_etf}")
+        self.logger.warning(f"LogReturn: {log_return}")
+        self.logger.warning(f"ExpReturn: {log_price_bw_expected_return}")
+        self.logger.warning(f"MeanEst: {self.mean_est}")
+        self.logger.warning(f"VarEst: {self.var_est}")
+
+        if log_price_bw_expected_return > 0:
+            insert_volume = min(self.max_bid_volume - self.position, 1)
+            insert_price = np.floor(
+                np.exp(log_price_bw_expected_return) * self.price_bw
+                + best_bid
+                - price_bw_future
+            )
+            if (
+                insert_volume > 0
+                and insert_price != self.bid_price
+                and self.order_count < self.max_order_count - 2
+            ):
+                if self.bid_id != 0:
+                    self.send_cancel_order(self.bid_id)
+                    self.bid_id = 0
+                    self.order_count += 1
+                self.bid_id = next(self.order_ids)
+                self.bid_price = insert_price
+                self.bid_volume = insert_volume
+                self.send_insert_order(
+                    self.bid_id,
+                    Side.BUY,
+                    self.bid_price,
+                    self.bid_volume,
+                    Lifespan.GOOD_FOR_DAY,
+                )
+                self.order_count += 1
+        elif log_price_bw_expected_return < 0:
+            insert_volume = min(self.max_ask_volume + self.position, 1)
+            insert_price = np.ceil(
+                np.exp(log_price_bw_expected_return) * self.price_bw
+                + best_ask
+                - price_bw_future
+            )
+            if (
+                insert_volume > 0
+                and insert_price != self.ask_price
+                and self.order_count < self.max_order_count - 2
+            ):
+                if self.ask_id != 0:
+                    self.send_cancel_order(self.ask_id)
+                    self.ask_id = 0
+                    self.order_count += 1
+                self.ask_id = next(self.order_ids)
+                self.ask_price = insert_price
+                self.ask_volume = insert_volume
+                self.send_insert_order(
+                    self.ask_id,
+                    Side.SELL,
+                    self.ask_price,
+                    self.ask_volume,
+                    Lifespan.GOOD_FOR_DAY,
+                )
+                self.order_count += 1
 
     def on_order_status_message(
         self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int
@@ -154,10 +243,15 @@ class AutoTrader(BaseAutoTrader):
 
         If an order is cancelled its remaining volume will be zero.
         """
-        if client_order_id == self.ask_id:
-            self.current_ask_volume = remaining_volume
+
+        if client_order_id == self.bid_id:
+            self.bid_volume = remaining_volume
+            if remaining_volume == 0:
+                self.bid_id = 0
         else:
-            self.current_bid_volume = remaining_volume
+            self.ask_volume = remaining_volume
+            if remaining_volume == 0:
+                self.ask_id = 0
 
     def on_position_change_message(
         self, future_position: int, etf_position: int
@@ -178,28 +272,4 @@ class AutoTrader(BaseAutoTrader):
         Each trade tick is a pair containing a price and the number of lots
         traded at that price since the last trade ticks message.
         """
-        pass
-
-    def updateMinSellPriceDiffFromBidAdd(self, bidPriceDiff, oldPriceDiff):
-        return max(bidPriceDiff, oldPriceDiff)
-
-    def updateMinSellPriceDiffFromAskAdd(self, askPriceDiff, oldPriceDiff):
-        return min(askPriceDiff, oldPriceDiff)
-
-    def updateMinSellPriceDiffFromBidRemove(self, bidPriceDiff, oldPriceDiff):
-        return min(bidPriceDiff, oldPriceDiff)
-
-    def updateMaxBuyPriceDiffFromBidAdd(self, bidPriceDiff, oldPriceDiff):
-        return max(bidPriceDiff, oldPriceDiff)
-
-    def updateMaxBuyPriceDiffFromAskAdd(self, askPriceDiff, oldPriceDiff):
-        return min(askPriceDiff, oldPriceDiff)
-
-    def updateMaxBuyPriceDiffFromAskRemove(self, askPriceDiff, oldPriceDiff):
-        return max(askPriceDiff, oldPriceDiff)
-
-    def updateMinSellPrice(self, sellPriceDiff, futureAsk):
-        return max(0, sellPriceDiff) + futureAsk
-
-    def updateMaxBuyPrice(self, buyPriceDiff, futureBid):
-        return min(0, buyPriceDiff) + futureBid
+        self.order_count = 0
